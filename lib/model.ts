@@ -32,18 +32,18 @@ export interface BoardRow {
   category: string;
   chains: string[];
   tvl_usd: number;
-  change_7d: number;
-  age: number;
+  change_7d: number | null;
+  age: number | null;
   implied_value_usd: number;
   growth_pct: number;
   growth_mult: number;
   maturity_mult: number;
   multiple: number;
   in_watchlist: boolean;
-  farm_steps: FarmStep[];
+  farm_steps: string[];
 }
 
-export interface FarmStep {
+export interface FarmStepObj {
   text: string;
   cost: number;
   time: number;
@@ -54,9 +54,16 @@ export interface RadarRow {
   slug: string;
   name: string;
   category: string;
+  chains: string[];
   tvl_usd: number;
+  change_7d: number | null;
+  age: number | null;
   implied_value_usd: number;
+  growth_mult: number;
+  maturity_mult: number;
+  multiple: number;
   in_watchlist: boolean;
+  farm_steps: string[];
 }
 
 export interface LiveRow {
@@ -81,17 +88,13 @@ export interface RadarData {
   live: LiveRow[];
 }
 
-export interface ModelConstants {
-  version: string;
-}
-
-export function ageDays(listedAt: string | null, asOf: string): number {
-  if (!listedAt) return 365;
+export function ageDays(listedAt: string | null, asOf: string): number | null {
+  if (!listedAt) return null;
   const d = new Date(listedAt);
-  if (isNaN(d.getTime())) return 365;
+  if (isNaN(d.getTime())) return null;
   const diff = new Date(asOf).getTime() - d.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  return days >= 0 ? days : 365;
+  return days >= 0 ? days : null;
 }
 
 export function isPreToken(p: SnapshotProtocol): boolean {
@@ -166,7 +169,7 @@ export function impliedValue(
   growthPct: number;
   growthMult: number;
   maturityMult: number;
-  age: number;
+  age: number | null;
   multiple: number;
 } {
   const tvl = protocol.tvl_usd ?? 0;
@@ -180,7 +183,8 @@ export function impliedValue(
   const growthMult = 1 + (growthPct / 100) * model.growth_weight;
 
   const age = ageDays(protocol.listed_at, asOf);
-  const maturityMult = 0.6 + Math.min(age, 1095) / 1095 * 0.4;
+  const ageForModel = age ?? 365;
+  const maturityMult = 0.6 + Math.min(ageForModel, 1095) / 1095 * 0.4;
 
   let implied = Math.max(1, Math.round(base * growthMult * maturityMult));
   return {
@@ -193,52 +197,90 @@ export function impliedValue(
   };
 }
 
-export function farmSteps(protocol: SnapshotProtocol, age: number): FarmStep[] {
+export function farmSteps(protocol: SnapshotProtocol, age: number | null): FarmStepObj[] {
   const cat = (protocol.category || '').toLowerCase();
-  let action = 'Deposit funds into protocol vault';
+  let coreAction = 'Deposit funds into protocol vault';
 
   if (cat.includes('lending') || cat.includes('cdp') || cat.includes('uncollateralized')) {
-    action = 'Supply assets as collateral and borrow securely';
+    coreAction = 'Supply assets as collateral and borrow securely';
   } else if (cat.includes('dex') || cat.includes('yield') || cat.includes('liquidity')) {
-    action = 'Provide liquidity into active trading pools';
+    coreAction = 'Provide liquidity in primary trading pools';
   } else if (cat.includes('bridge')) {
-    action = 'Bridge assets across supported networks';
+    coreAction = 'Bridge assets across connected networks';
   } else if (cat.includes('staking') || cat.includes('restaking') || cat.includes('btc')) {
-    action = 'Stake native assets to secure validator network';
+    coreAction = 'Stake native tokens to secure validator network';
   } else if (cat.includes('perpetual') || cat.includes('deriv')) {
-    action = 'Deposit margin collateral for trading positions';
+    coreAction = 'Deposit margin collateral for open positions';
   } else if (cat.includes('prediction')) {
-    action = 'Place predictive position on active market outcomes';
+    coreAction = 'Place predictive positions on active market outcomes';
   } else if (cat.includes('allocator') || cat.includes('curator')) {
-    action = 'Deposit capital into managed strategy vault';
+    coreAction = 'Deposit capital into managed strategy vault';
   } else if (cat.includes('stable') || cat.includes('wrapper')) {
-    action = 'Mint or deposit stable reserve assets';
+    coreAction = 'Mint or deposit stable reserve assets';
   } else if (cat.includes('rwa')) {
-    action = 'Mint yield-bearing real world asset tokens';
+    coreAction = 'Mint yield-bearing real world asset tokens';
   } else if (cat.includes('insurance')) {
-    action = 'Purchase loss protection cover for protocol deposits';
+    coreAction = 'Purchase loss protection cover for deposits';
   }
 
   const tvl = protocol.tvl_usd ?? 0;
-  let cost = 50;
-  if (tvl > 5_000_000_000) cost = 250;
-  else if (tvl > 1_000_000_000) cost = 150;
-  else if (tvl > 100_000_000) cost = 100;
+  let capital = 50;
+  if (tvl > 5_000_000_000) capital = 250;
+  else if (tvl > 1_000_000_000) capital = 150;
+  else if (tvl > 100_000_000) capital = 100;
 
-  let time = 30;
-  if (age < 180) time = 60;
-  else if (age < 365) time = 45;
+  const actualAge = age ?? 30;
+  let holdDays = 30;
+  if (actualAge < 180) holdDays = 60;
+  else if (actualAge < 365) holdDays = 45;
 
-  const steps: FarmStep[] = [];
-  for (let i = 1; i <= 6; i++) {
-    const text = `${action} (Phase ${i}). Cost: $${cost}. Time: ${time}d.`;
-    steps.push({ text, cost, time });
-  }
+  const chain = (protocol.chains && protocol.chains.length > 0) ? protocol.chains[0] : 'primary network';
+  const protoName = protocol.name || 'protocol';
+
+  const steps: FarmStepObj[] = [
+    {
+      text: `Prepare a dedicated fresh wallet containing only farming funds and seed offline for ${protoName}.`,
+      cost: 3,
+      time: 5,
+    },
+    {
+      text: `Execute primary action on ${chain}: ${coreAction} with $${capital} initial capital.`,
+      cost: capital,
+      time: 15,
+    },
+    {
+      text: `Perform one qualifying weekly interaction (swap, deposit, or vote) to maintain active user status.`,
+      cost: 2,
+      time: 10,
+    },
+    {
+      text: `Maintain the position uninterrupted for ${holdDays} days to ensure activity spans multiple snapshots.`,
+      cost: 0,
+      time: holdDays,
+    },
+    {
+      text: `Verify rewards and points exclusively through official ${protoName} app links; never sign unverified claims.`,
+      cost: 0,
+      time: 10,
+    },
+    {
+      text: `Log wallet address, transaction hashes, dates, and balances in a secure local farm journal.`,
+      cost: 0,
+      time: 5,
+    },
+  ];
+
   return steps;
 }
 
-export function stepText(steps: FarmStep[]): string {
-  return steps.map((s) => s.text).join(' ');
+export function stepText(step: FarmStepObj): string {
+  let text = `${step.text} Cost: ${step.cost}. Time: ${step.time}.`;
+  if (text.length < 20) {
+    text = text.padEnd(20, '.');
+  } else if (text.length > 600) {
+    text = text.slice(0, 596) + '...';
+  }
+  return text;
 }
 
 export function buildBoard(snapshot: Snapshot): BoardRow[] {
@@ -257,14 +299,15 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
     if (p) {
       includedSlugs.add(wSlug);
       const iv = impliedValue(p, snapshot.as_of, MODEL, multiples);
-      const steps = farmSteps(p, iv.age);
+      const stepObjs = farmSteps(p, iv.age);
+      const steps = stepObjs.map(stepText);
       rawRows.push({
         slug: p.slug,
         name: p.name,
         category: p.category || 'Unknown',
         chains: p.chains || [],
         tvl_usd: p.tvl_usd ?? 0,
-        change_7d: p.change_7d ?? 0,
+        change_7d: p.change_7d,
         age: iv.age,
         implied_value_usd: iv.implied,
         growth_pct: iv.growthPct,
@@ -282,14 +325,15 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
     if (!includedSlugs.has(p.slug) && isRankable(p)) {
       includedSlugs.add(p.slug);
       const iv = impliedValue(p, snapshot.as_of, MODEL, multiples);
-      const steps = farmSteps(p, iv.age);
+      const stepObjs = farmSteps(p, iv.age);
+      const steps = stepObjs.map(stepText);
       rawRows.push({
         slug: p.slug,
         name: p.name,
         category: p.category || 'Unknown',
         chains: p.chains || [],
         tvl_usd: p.tvl_usd ?? 0,
-        change_7d: p.change_7d ?? 0,
+        change_7d: p.change_7d,
         age: iv.age,
         implied_value_usd: iv.implied,
         growth_pct: iv.growthPct,
@@ -318,7 +362,7 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
     let row = rawRows[i];
     let val = row.implied_value_usd;
     while (seenImplied.has(val)) {
-      val += 1; // ensure uniqueness if duplicate collision occurs
+      val += 1;
     }
     seenImplied.add(val);
     if (val !== row.implied_value_usd) {
@@ -347,7 +391,6 @@ export function buildBoard(snapshot: Snapshot): BoardRow[] {
 }
 
 export function boardIssue(board: BoardRow[], snapshot: Snapshot): string | null {
-  const watchlistSet = new Set(snapshot.watchlist);
   for (const w of snapshot.watchlist) {
     if (!board.some((r) => r.slug === w)) {
       return `Watchlist protocol missing from board: ${w}`;
@@ -364,12 +407,12 @@ export function boardIssue(board: BoardRow[], snapshot: Snapshot): string | null
     if (i > 0 && board[i].implied_value_usd >= board[i - 1].implied_value_usd) {
       return `Implied value not strictly decreasing at index ${i} (${board[i].slug})`;
     }
-    if (!board[i].farm_steps || board[i].farm_steps.length < 3 || board[i].farm_steps.length > 12) {
+    if (!Array.isArray(board[i].farm_steps) || board[i].farm_steps.length < 3 || board[i].farm_steps.length > 12) {
       return `Invalid farm steps count for ${board[i].slug}`;
     }
     for (const step of board[i].farm_steps) {
-      if (step.text.length < 20 || step.text.length > 600) {
-        return `Farm step text length out of bounds for ${board[i].slug}: ${step.text.length}`;
+      if (typeof step !== 'string' || step.length < 20 || step.length > 600) {
+        return `Farm step invalid or length out of bounds for ${board[i].slug}: ${typeof step === 'string' ? step.length : typeof step}`;
       }
     }
   }
@@ -406,9 +449,16 @@ export function buildRadar(snapshot: Snapshot): { board: BoardRow[]; radar: Rada
     slug: r.slug,
     name: r.name,
     category: r.category,
+    chains: r.chains,
     tvl_usd: r.tvl_usd,
+    change_7d: r.change_7d,
+    age: r.age,
     implied_value_usd: r.implied_value_usd,
+    growth_mult: r.growth_mult,
+    maturity_mult: r.maturity_mult,
+    multiple: r.multiple,
     in_watchlist: r.in_watchlist,
+    farm_steps: r.farm_steps,
   }));
 
   const radar: RadarData = {

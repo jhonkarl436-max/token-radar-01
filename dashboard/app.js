@@ -51,8 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatPercent(num) {
+    if (num === null || num === undefined || isNaN(num)) return 'n/a';
     const sign = num > 0 ? '+' : '';
     return `${sign}${num.toFixed(1)}%`;
+  }
+
+  function formatAge(age) {
+    if (age === null || age === undefined || isNaN(age)) return 'n/a';
+    return `${age}d`;
   }
 
   // Render Live Table
@@ -96,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const watchlistBadge = r.in_watchlist ? '<span class="watchlist-badge">W</span>' : '';
-      const growthClass = r.change_7d > 0 ? 'positive' : (r.change_7d < 0 ? 'negative' : '');
+      const growthClass = (r.change_7d !== null && r.change_7d > 0) ? 'positive' : ((r.change_7d !== null && r.change_7d < 0) ? 'negative' : '');
 
       tr.innerHTML = `
         <td>#${r.rank}</td>
@@ -110,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${Array.isArray(r.chains) && r.chains.length > 0 ? r.chains[0] : 'Multiple'}</td>
         <td>${formatUSD(r.tvl_usd)}</td>
         <td class="${growthClass}">${formatPercent(r.change_7d)}</td>
-        <td>${r.age}d</td>
+        <td>${formatAge(r.age)}</td>
         <td><strong>${formatUSD(r.implied_value_usd)}</strong></td>
       `;
 
@@ -131,9 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let stepsHtml = '';
     if (Array.isArray(r.farm_steps) && r.farm_steps.length > 0) {
-      stepsHtml = r.farm_steps.map((step, idx) => `
+      stepsHtml = r.farm_steps.map((stepText, idx) => `
         <div class="step-item">
-          <strong>Step ${idx + 1}:</strong> ${step.text}
+          <strong>Step ${idx + 1}:</strong> ${stepText}
         </div>
       `).join('');
     } else {
@@ -159,11 +165,11 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="metric-box">
           <span class="label">7d Growth</span>
-          <span class="value ${r.change_7d > 0 ? 'positive' : (r.change_7d < 0 ? 'negative' : '')}">${formatPercent(r.change_7d)}</span>
+          <span class="value ${r.change_7d !== null && r.change_7d > 0 ? 'positive' : (r.change_7d !== null && r.change_7d < 0 ? 'negative' : '')}">${formatPercent(r.change_7d)}</span>
         </div>
         <div class="metric-box">
           <span class="label">Protocol Age</span>
-          <span class="value">${r.age} days</span>
+          <span class="value">${formatAge(r.age)}</span>
         </div>
       </div>
       <div class="detail-breakdown">
@@ -231,9 +237,13 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (sortBy === 'tvl-desc') {
         return b.tvl_usd - a.tvl_usd;
       } else if (sortBy === 'growth-desc') {
-        return (b.change_7d ?? 0) - (a.change_7d ?? 0);
+        const ga = a.change_7d ?? -999;
+        const gb = b.change_7d ?? -999;
+        return gb - ga;
       } else if (sortBy === 'age-desc') {
-        return b.age - a.age;
+        const aa = a.age ?? -1;
+        const ab = b.age ?? -1;
+        return ab - aa;
       } else if (sortBy === 'slug-asc') {
         return a.slug.localeCompare(b.slug);
       }
