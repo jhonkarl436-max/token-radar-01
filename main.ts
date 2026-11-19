@@ -1,7 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { parseSnapshot, buildRadar, boardIssue, dataScript } from './lib/model.ts';
 import { buildDossier } from './vendor/makefun-board.ts';
+
+const here = fileURLToPath(new URL('.', import.meta.url));
 
 function parseArgs(): { input: string; output: string } {
   let input = '/input';
@@ -108,8 +111,8 @@ function main() {
   fs.writeFileSync(dataJsPath, dataScript(radar), 'utf8');
 
   // 3. Copy dashboard/ and screenshots/
-  copyRecursive('dashboard', path.join(output, 'dashboard'));
-  copyRecursive('screenshots', path.join(output, 'screenshots'));
+  copyRecursive(path.join(here, 'dashboard'), path.join(output, 'dashboard'));
+  copyRecursive(path.join(here, 'screenshots'), path.join(output, 'screenshots'));
 
   // 4. Check screenshots count
   const ssCount = countScreenshots(output);
