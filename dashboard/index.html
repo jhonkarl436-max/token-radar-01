@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token Radar - Pre-Token Valuation Board</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <h1>Token Radar</h1>
+      <p class="subtitle">Sealed DefiLlama Snapshot Analysis &bull; As of <span id="header-as-of">2026-11-14</span> &bull; Source: <span id="header-source">DefiLlama</span></p>
+      <div class="stats-bar">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-protocols">758</span>
+          <span class="stat-label">Protocols in Snapshot</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-board">196</span>
+          <span class="stat-label">Board Size</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-watchlist">40</span>
+          <span class="stat-label">Watchlist Covered</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-live">24</span>
+          <span class="stat-label">Live Protocols</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card model-section">
+      <h2>How the Model Works</h2>
+      <p>
+        Token Radar computes the implied token value of pre-token protocols using a robust quantitative framework:
+        <code>Implied Value = TVL &times; Category Multiple &times; Growth Multiplier (7d) &times; Maturity Multiplier (Age)</code>.
+        Category multiples are derived from the median market-cap-to-TVL ratios of tokened protocols per category (clamped between 0.05 and 3.0). Growth is clamped between -60% and +120% with a 0.5 weight. Maturity is scaled from protocol age without a token (capped at 1,095 days).
+      </p>
+    </section>
+
+    <section class="card filter-section">
+      <h2>Radar Board Controls</h2>
+      <div class="controls-grid">
+        <div class="control-group">
+          <label for="search-input">Search Protocol</label>
+          <input type="text" id="search-input" placeholder="Name or slug...">
+        </div>
+        <div class="control-group">
+          <label for="category-select">Category</label>
+          <select id="category-select">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="chain-select">Chain</label>
+          <select id="chain-select">
+            <option value="">All Chains</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="min-tvl-select">Min TVL</label>
+          <select id="min-tvl-select">
+            <option value="0">Any TVL</option>
+            <option value="10000000">&gt; $10M</option>
+            <option value="50000000">&gt; $50M (Floor)</option>
+            <option value="100000000">&gt; $100M</option>
+            <option value="500000000">&gt; $500M</option>
+            <option value="1000000000">&gt; $1B</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="sort-select">Sort By</label>
+          <select id="sort-select">
+            <option value="rank">Implied Value (High to Low)</option>
+            <option value="tvl-desc">TVL (High to Low)</option>
+            <option value="growth-desc">Growth 7d (High to Low)</option>
+            <option value="age-desc">Age (Oldest First)</option>
+            <option value="slug-asc">Name (A-Z)</option>
+          </select>
+        </div>
+        <div class="control-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="watchlist-checkbox"> Watchlist Only (<span id="watchlist-count">40</span>)
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <div class="content-split">
+      <section class="card board-section">
+        <div class="section-header">
+          <h2>Pre-Token Valuation Board</h2>
+          <span class="badge" id="visible-count">Showing 196 rows</span>
+        </div>
+        <div class="table-container">
+          <table id="board-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Protocol</th>
+                <th>Category</th>
+                <th>Chain</th>
+                <th>TVL</th>
+                <th>Growth 7d</th>
+                <th>Age</th>
+                <th>Implied Value</th>
+              </tr>
+            </thead>
+            <tbody id="board-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside class="card detail-section" id="detail-panel">
+        <h2>Protocol Detail</h2>
+        <div id="detail-content" class="detail-placeholder">
+          <p>Click any protocol row in the board to inspect valuation breakdown, farm steps, and metadata.</p>
+        </div>
+      </aside>
+    </div>
+
+    <section class="card live-section">
+      <h2>Live Token Benchmarks (Top Market Cap)</h2>
+      <p class="section-desc">Top tokened protocols from snapshot (excluding CEX) sorted by market capitalization, providing empirical valuation benchmarks.</p>
+      <div class="table-container">
+        <table id="live-table">
+          <thead>
+            <tr>
+              <th>Protocol</th>
+              <th>Category</th>
+              <th>Market Cap</th>
+              <th>TVL</th>
+              <th>MCap / TVL</th>
+            </tr>
+          </thead>
+          <tbody id="live-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Token Radar is a quantitative modeling system for research and analysis. Implied values are model outputs based on snapshot data, not token launch predictions. Sealed snapshot date: 2026-11-14.</p>
+  </footer>
+
+  <script src="../data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
