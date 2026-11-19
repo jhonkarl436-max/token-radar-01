@@ -27,7 +27,7 @@ function copyRecursive(src: string, dest: string) {
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(dest, { recursive: true });
     }
-    for (const entry of fs.readdirNames ? fs.readdirNames(src) : fs.readdirSync(src)) {
+    for (const entry of fs.readdirSync(src)) {
       if (entry.startsWith('.')) continue;
       copyRecursive(path.join(src, entry), path.join(dest, entry));
     }
@@ -115,23 +115,19 @@ function main() {
   const ssCount = countScreenshots(output);
   if (ssCount < 3) {
     console.error(`Warning: found ${ssCount} screenshots (expected at least 3).`);
+    process.exit(1);
   }
 
-  // 5. Write dossier.json
+  // 5. Write dossier.json (FATAL on error)
   try {
-    buildDossier(output, {
+    const dossierBytes = buildDossier(output, {
       text_max_bytes: 65536,
       screenshots: { max: 4, max_bytes: 524288 },
       dashboard: { max_files: 400, max_bytes: 4194304 },
     });
+    fs.writeFileSync(path.join(output, 'dossier.json'), dossierBytes);
   } catch (err) {
     console.error(`Failed to build dossier: ${err}`);
-    if (ssCount < 3) {
-      process.exit(1);
-    }
-  }
-
-  if (ssCount < 3) {
     process.exit(1);
   }
 

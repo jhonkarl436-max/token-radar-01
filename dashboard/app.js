@@ -97,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     rowsToRender.forEach(r => {
       const tr = document.createElement('tr');
+      tr.dataset.slug = r.slug;
       if (r.slug === selectedSlug) {
         tr.classList.add('selected');
       }
@@ -200,6 +201,8 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>
     `;
+
+    detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   // Filter and Sort logic
@@ -261,6 +264,56 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('watchlist-checkbox').addEventListener('change', applyFilters);
   document.getElementById('sort-select').addEventListener('change', applyFilters);
 
-  // Initial render
-  renderBoard(boardRows);
+  // Handle location.hash deep-linking
+  function handleHash() {
+    const hash = window.location.hash.substring(1);
+    if (!hash) return;
+    const params = new URLSearchParams(hash);
+
+    const sortVal = params.get('sort');
+    if (sortVal) {
+      const sortSelect = document.getElementById('sort-select');
+      if (sortSelect) {
+        sortSelect.value = sortVal;
+      }
+    }
+
+    const catVal = params.get('category');
+    if (catVal) {
+      const catSelect = document.getElementById('category-select');
+      if (catSelect) {
+        catSelect.value = catVal;
+      }
+    }
+
+    const watchlistVal = params.get('watchlist');
+    if (watchlistVal === '1' || watchlistVal === 'true') {
+      const wCheck = document.getElementById('watchlist-checkbox');
+      if (wCheck) {
+        wCheck.checked = true;
+      }
+    }
+
+    applyFilters();
+
+    const detailSlug = params.get('detail');
+    if (detailSlug) {
+      const targetProto = boardRows.find(r => r.slug === detailSlug);
+      if (targetProto) {
+        selectedSlug = targetProto.slug;
+        renderBoard(boardRows.filter(r => {
+          // ensure row is visible or temporarily highlight
+          return true;
+        }));
+        // Re-apply filters to make sure row is visible
+        applyFilters();
+        renderDetail(targetProto);
+      }
+    }
+  }
+
+  // Initial render and apply hash
+  applyFilters();
+  handleHash();
+  window.addEventListener('hashchange', handleHash);
 });

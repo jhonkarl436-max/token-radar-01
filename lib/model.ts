@@ -45,8 +45,8 @@ export interface BoardRow {
 
 export interface FarmStepObj {
   text: string;
-  cost: number;
-  time: number;
+  cost: string;
+  time: string;
 }
 
 export interface RadarRow {
@@ -229,6 +229,8 @@ export function farmSteps(protocol: SnapshotProtocol, age: number | null): FarmS
   else if (tvl > 1_000_000_000) capital = 150;
   else if (tvl > 100_000_000) capital = 100;
 
+  const gasStep2 = capital >= 150 ? 8 : 4;
+
   const actualAge = age ?? 30;
   let holdDays = 30;
   if (actualAge < 180) holdDays = 60;
@@ -240,33 +242,33 @@ export function farmSteps(protocol: SnapshotProtocol, age: number | null): FarmS
   const steps: FarmStepObj[] = [
     {
       text: `Prepare a dedicated fresh wallet containing only farming funds and seed offline for ${protoName}.`,
-      cost: 3,
-      time: 5,
+      cost: 'under $3 of gas',
+      time: '5 minutes',
     },
     {
-      text: `Execute primary action on ${chain}: ${coreAction} with $${capital} initial capital.`,
-      cost: capital,
-      time: 15,
+      text: `Execute primary action on ${chain}: ${coreAction} with initial capital.`,
+      cost: `$${capital} of capital and about $${gasStep2} of gas`,
+      time: '15 minutes to set up',
     },
     {
       text: `Perform one qualifying weekly interaction (swap, deposit, or vote) to maintain active user status.`,
-      cost: 2,
-      time: 10,
+      cost: 'about $2 of gas a week',
+      time: '10 minutes a week',
     },
     {
       text: `Maintain the position uninterrupted for ${holdDays} days to ensure activity spans multiple snapshots.`,
-      cost: 0,
-      time: holdDays,
+      cost: `the $${capital} stays in the position`,
+      time: `${holdDays} days`,
     },
     {
       text: `Verify rewards and points exclusively through official ${protoName} app links; never sign unverified claims.`,
-      cost: 0,
-      time: 10,
+      cost: 'no fee to check, and never pay to claim',
+      time: '10 minutes',
     },
     {
       text: `Log wallet address, transaction hashes, dates, and balances in a secure local farm journal.`,
-      cost: 0,
-      time: 5,
+      cost: 'nothing but the log',
+      time: '5 minutes',
     },
   ];
 
